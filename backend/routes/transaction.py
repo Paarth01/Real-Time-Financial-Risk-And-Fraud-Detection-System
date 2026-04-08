@@ -60,6 +60,8 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 
+from services.fraud_service import fraud_engine
+
 @router.post(
     "/",
     response_model=TransactionResponse,
@@ -72,19 +74,28 @@ async def create_transaction(
     db: Session = Depends(get_db)
 ):
     """
-    Create a new transaction for the current user. Good for integration & simulators.
+    Create a new transaction for the current user. Evaluates Fraud Logic.
     """
-    # Simple risk logic purely for demonstration
-    status_val = TransactionStatus.COMPLETED
-    if tx_data.amount > 1000:
-        status_val = TransactionStatus.SUSPICIOUS
+    # Fetch recent transactions for velocity rules
+    recent_txs = db.query(Transaction)\
+                   .filter(Transaction.user_id == current_user.id)\
+                   .order_by(desc(Transaction.timestamp))\
+                   .limit(10)\
+                   .all()
+
+    # Evaluate using ML & Rules
+    is_fraud, anomaly_score = fraud_engine.evaluate_transaction(tx_data.amount, recent_txs)
+
+    status_val = TransactionStatus.SUSPICIOUS if is_fraud else TransactionStatus.COMPLETED
 
     db_tx = Transaction(
         user_id=current_user.id,
         amount=tx_data.amount,
         transaction_type=tx_data.transaction_type,
         location=tx_data.location,
-        status=status_val
+        status=status_val,
+        is_fraud=is_fraud,
+        anomaly_score=anomaly_score
     )
     db.add(db_tx)
     db.commit()
@@ -98,7 +109,9 @@ async def create_transaction(
         "transaction_type": db_tx.transaction_type.value,
         "timestamp": db_tx.timestamp.isoformat(),
         "location": db_tx.location,
-        "status": db_tx.status.value
+        "status": db_tx.status.value,
+        "is_fraud": db_tx.is_fraud,
+        "anomaly_score": db_tx.anomaly_score
     }
     await manager.broadcast_to_user(str(db_tx.user_id), tx_dict)
 

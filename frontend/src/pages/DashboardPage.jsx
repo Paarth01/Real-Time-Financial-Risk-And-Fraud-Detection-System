@@ -156,7 +156,7 @@ export default function DashboardPage() {
 
         {/* Two-Column Layout */}
         <div className="dashboard-columns">
-          {/* Profile Column */}
+          {/* Profile & Alerts Column */}
           <div className="column-left">
             <div className="profile-card">
               <div className="card">
@@ -180,19 +180,33 @@ export default function DashboardPage() {
                     <label>Role</label>
                     <p style={{ textTransform: "capitalize" }}>{user?.role}</p>
                   </div>
-                  <div className="profile-field">
-                    <label>Member Since</label>
-                    <p>
-                      {user?.created_at
-                        ? new Date(user.created_at).toLocaleDateString("en-US", {
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                          })
-                        : "—"}
-                    </p>
-                  </div>
                 </div>
+              </div>
+            </div>
+
+            {/* Fraud Alerts Panel */}
+            <div className="fraud-alerts-panel">
+              <div className="fraud-alerts-header">
+                <AlertTriangle size={18} />
+                <h3>ML Fraud Alerts</h3>
+              </div>
+              <div className="fraud-alerts-list">
+                {transactions.filter(t => t.is_fraud).length === 0 ? (
+                  <div className="empty-alerts">No malicious activity detected.</div>
+                ) : (
+                  transactions
+                    .filter(t => t.is_fraud)
+                    .slice(0, 5)
+                    .map((tx) => (
+                      <div key={`alert-${tx.id}`} className="alert-item">
+                        <div className="alert-pulse"></div>
+                        <div className="alert-info">
+                          <span className="alert-amount">${tx.amount.toFixed(2)}</span>
+                          <span className="alert-score">Risk: {(tx.anomaly_score * 100).toFixed(0)}%</span>
+                        </div>
+                      </div>
+                    ))
+                )}
               </div>
             </div>
           </div>
@@ -217,7 +231,7 @@ export default function DashboardPage() {
                   transactions.map((tx) => (
                     <div 
                       key={tx.id} 
-                      className={`feed-item ${tx.status === "suspicious" ? "suspicious-item" : "normal-item"}`}
+                      className={`feed-item ${tx.is_fraud ? "fraud-item" : tx.status === "suspicious" ? "suspicious-item" : "normal-item"}`}
                     >
                       <div className="feed-item-icon">
                         <Activity size={16} />
@@ -227,9 +241,12 @@ export default function DashboardPage() {
                           <span className="tx-amount">
                             {tx.transaction_type === "credit" ? "+" : "-"}${tx.amount.toFixed(2)}
                           </span>
-                          <span className={`tx-status badge-${tx.status}`}>
-                            {tx.status}
-                          </span>
+                          <div className="tx-badges">
+                            {tx.is_fraud && <span className="badge-fraud">FRAUD DETECTED</span>}
+                            <span className={`tx-status badge-${tx.status}`}>
+                              {tx.status}
+                            </span>
+                          </div>
                         </div>
                         <div className="feed-item-bottom">
                           <span className="tx-location">
@@ -238,6 +255,11 @@ export default function DashboardPage() {
                           <span className="tx-time">
                             <Clock size={12} /> {new Date(tx.timestamp).toLocaleTimeString()}
                           </span>
+                          {tx.anomaly_score !== undefined && (
+                            <span className="tx-ml-score">
+                              <TrendingUp size={12} /> Score: {tx.anomaly_score.toFixed(2)}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>

@@ -4,7 +4,7 @@ Transaction model for the fintech system.
 
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Column, String, DateTime, Float, ForeignKey, Enum as SQLEnum
+from sqlalchemy import Column, String, DateTime, Float, ForeignKey, Boolean, Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from config.database import Base
@@ -53,9 +53,11 @@ class Transaction(Base):
         nullable=False,
         index=True,
     )
+    is_fraud = Column(Boolean, default=False, nullable=False, index=True)
+    anomaly_score = Column(Float, default=0.0, nullable=False)
 
     # Relationships
     user = relationship("User", back_populates="transactions")
 
     def __repr__(self):
-        return f"<Transaction(id={self.id}, amount={self.amount}, status={self.status})>"
+        return f"<Transaction(id={self.id}, amount={self.amount}, is_fraud={self.is_fraud})>"

@@ -27,6 +27,8 @@ class TransactionResponse(BaseModel):
     timestamp: datetime
     location: Optional[str]
     status: TransactionStatus
+    is_fraud: bool
+    anomaly_score: float
 
     class Config:
         from_attributes = True
