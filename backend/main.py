@@ -8,6 +8,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from config.settings import get_settings
 from config.database import engine, Base
 from routes.auth import router as auth_router
+from routes.transaction import router as tx_router
+
+# Ensure models are imported so Base metadata is populated
+import models.user
+import models.transaction
 
 settings = get_settings()
 
@@ -33,6 +38,7 @@ app.add_middleware(
 
 # Register routes
 app.include_router(auth_router, prefix="/api/v1")
+app.include_router(tx_router, prefix="/api/v1")
 
 
 @app.get("/", tags=["Health"])
